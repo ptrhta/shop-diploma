@@ -1,17 +1,23 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { changeSearchField, startSearch } from '../actions/actionCreators';
+import { changeSearchField, getUrl } from '../actions/actionCreators';
+import { push } from 'connected-react-router';
+import { useHistory } from 'react-router';
 
 export function Search() {
-  const { search } = useSelector((state) => state.Search);
+  const { search } = useSelector((state) => state.search);
   const dispatch = useDispatch();
+  const history = useHistory();
 
   const onChange = (event) => {
     dispatch(changeSearchField(event.target.value));
   };
   const onSearch = (event) => {
     event.preventDefault();
-    dispatch(startSearch(search));
+    const url = getUrl('/catalog', search);
+    history.push(url)
+
+    dispatch(push(url));
   };
 
   return (

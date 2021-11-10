@@ -1,80 +1,65 @@
 import React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { PropTypes } from 'prop-types';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch, connect } from 'react-redux';
 import { Loader } from './Loader';
 import { ErrorAlert } from './ErrorAlert';
 import {
-  changeOrderDetails,
-  sendOrderRequest,
-  sendOrderSuccess,
-  sendOrderFailure,
-  removeFromCart
+  removeFromCart,
+  cartSendInit,
+  cartSendRequest
 } from '../actions/actionCreators';
 
 export function Cart(props) {
+  const [owner, setOwner] = useState(null);
+  const dispatch = useDispatch();
   const {
-    owner: { phone, address },
-    agreement,
     loading,
     error,
     success,
     items
-  } = useSelector((state) => state.Cart);
-  const dispatch = useDispatch();
+  } = useSelector((state) => state.cart);
+  const initialForm = {
+    phone: '',
+    address: '',
+    agreement: false,
+  };
+
+  console.log(loading,
+    error,
+    success,
+    items)
+
+  const [cartForm, setCartForm] = useState(initialForm);
 
   useEffect(() => {
-    const addToLocalStorage = () => {
-      localStorage.setItem('items', JSON.stringify(items));
-    };
-    addToLocalStorage();
-  }, [items]);
+    dispatch(cartSendInit());
+  }, [dispatch]);
 
-  const onChangePhone = (event) => {
-    dispatch(changeOrderDetails(event.target.value, address, agreement));
-  };
-  const onChangeAddress = (event) => {
-    dispatch(changeOrderDetails(phone, event.target.value, agreement));
-  };
-  const onChangeAgreement = (event) => {
-    dispatch(changeOrderDetails(phone, address, event.target.checked));
+  useEffect(() => {
+    if (owner) dispatch(cartSendRequest(owner));
+  }, [dispatch, owner]);
+
+  const handleSendCart = (newOwner = null) => {
+    setOwner((prev) => ( newOwner || { ...prev } ));
   };
 
-  const orderModel = { owner: { phone, address },
-    items: items.map((i) => {
-      const { title, size, ...orderItem } = i;
-      return orderItem;
-    })
-  };
- 
-  const sendOrder = async () => {
-    try {
-      dispatch(sendOrderRequest());
-      const response = await fetch(`http://localhost:7070/api/order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderModel)
-      });
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-      dispatch(sendOrderSuccess());
-    } catch (error) {
-      dispatch(sendOrderFailure(error.message));
-    }
-  };
-
-  const onSubmitOrder = (event) => {
-    event.preventDefault();
-    sendOrder();
-    localStorage.clear();
+  const handleInput = event => {
+    const name = event.target.id;
+    const value = (event.target.type === 'checkbox' ? event.target.checked : event.target.value);
+    setCartForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const onRemove = (id) => {
     dispatch(removeFromCart(id));
+  };
+
+  const handleSubmit = event => {
+    event.preventDefault();
+    const { phone, address } = cartForm;
+    handleSendCart({ phone, address });
+    setCartForm(cartForm);
   };
 
   return (
@@ -94,7 +79,7 @@ export function Cart(props) {
             </tr>
           </thead>
           <tbody>
-            {props.cartItems.map((o) => <tr key={o.id}>
+            {items.map((o) => <tr key={o.id}>
               <th scope="row">1</th>
               <td><Link to={`/catalog/${o.id}`}>{o.title}</Link></td>
               <td>{o.size}</td>
@@ -128,8 +113,8 @@ export function Cart(props) {
         <h2 className="text-center">Оформить заказ</h2>
         {(loading) ? <Loader /> :
         <div className="card" style={{ maxWidth: '30rem', margin: '0 auto' }}>
-          {(error) ? <ErrorAlert onRetry={(event) => onSubmitOrder(event)} /> : null }
-          <form className="card-body" onSubmit={(event) => onSubmitOrder(event)}>
+          {(error) ? <ErrorAlert onRetry={() => handleSendCart()} /> : null }
+          <form className="card-body" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="phone">Телефон</label>
               <input
@@ -137,8 +122,8 @@ export function Cart(props) {
                 name="phone"
                 id="phone"
                 placeholder="Ваш телефон"
-                value={phone}
-                onChange={(event) => onChangePhone(event)}
+                value={cartForm.phone}
+                onChange={handleInput}
               />
             </div>
             <div className="form-group">
@@ -148,8 +133,8 @@ export function Cart(props) {
                 name="address"
                 id="address"
                 placeholder="Адрес доставки"
-                value={address}
-                onChange={(event) => onChangeAddress(event)}
+                value={cartForm.address}
+                onChange={handleInput}
               />
             </div>
             <div className="form-group form-check">
@@ -157,15 +142,15 @@ export function Cart(props) {
                 type="checkbox"
                 className="form-check-input"
                 id="agreement"
-                onChange={(event) => onChangeAgreement(event)}
-                checked={agreement}
+                onChange={handleInput}
+                checked={cartForm.agreement}
               />
               <label className="form-check-label" htmlFor="agreement">Согласен с правилами доставки</label>
             </div>
             <button
               type="submit"
               className="btn btn-outline-secondary"
-              disabled={!agreement}
+              disabled={!cartForm.agreement}
             >
               Оформить
             </button>
@@ -177,7 +162,7 @@ export function Cart(props) {
 }
 
 const mapStateToProps = (state) => ({
-  cartItems: state.Cart.items
+  cartItems: state.cart.items
 });
 export const ConnectedCart = connect(mapStateToProps, {})(Cart);
 Cart.propTypes = {

@@ -4,46 +4,50 @@ import {
     SEND_ORDER_SUCCESS,
     SEND_ORDER_FAILURE,
     ADD_TO_CART,
-    REMOVE_FROM_CART
+    REMOVE_FROM_CART,
+    CART_SEND_INIT,
+    CART_SEND_REQUEST
   } from '../actions/actionTypes';
   
   const initialState = {
-    owner: {
-      phone: '',
-      address: '',
-    },
-    agreement: false,
-    items: (localStorage.getItem('items')) ? [...JSON.parse(localStorage.getItem('items'))] : [],
+    items: [],
     loading: false,
     error: null,
     success: false
   };
+
+  const compareOrder = (a, b) => (
+    a.id === b.id && a.size === b.size && a.price === b.price
+  );
   
   export default function CartReducer(state = initialState, action) {
     switch (action.type) {
+      case CART_SEND_INIT:
+        return { ...state, sending: false, error: null, success: false };
+      case CART_SEND_REQUEST:
+        return { ...state, sending: true, error: null, success: false };
       case CHANGE_ORDER_DETAILS:
         const { phone, address, agreement } = action.payload;
         return { ...state, owner: { ...state.owner, phone, address }, agreement };
       case SEND_ORDER_REQUEST:
-        return { ...state, loading: true };
+        return { ...state, sending: true, error: null, success: false };
       case SEND_ORDER_SUCCESS:
-        return { ...initialState, items: [], success: true };
+        return { ...state, items: [], sending: false, success: true };
       case SEND_ORDER_FAILURE:
-        const { error } = action.payload;
-        return { ...state, error, loading: false };
+        return { ...state, sending: false, error: action.payload.error };
       case ADD_TO_CART:
-        const { item } = action.payload;
-        return {
-          ...state,
-          items:
-          (state.items.find((o) => (o.id === item.id && o.size === item.size))) ?
-            [...state.items.map((o) => (o.id === item.id) ? {...o, count:o.count + item.count} : o)] :
-            [...state.items, item],
-          success: false
-        };
+        const items = [...state.items];
+        const orderIndex = items.findIndex((el) => compareOrder(el, action.payload.item));
+
+        if (orderIndex === -1) {
+          items.push(action.payload.item);
+        } else {
+          items[orderIndex].count += action.payload.item.count;
+        }
+
+        return { ...state, items };
       case REMOVE_FROM_CART:
-        const { id } = action.payload;
-        return { ...state, items: [...state.items.filter((o) => o.id !== id)] };
+        return { ...state, items: state.items.filter((o) => o.id !== action.payload.id) };
       default:
         return state;
     }

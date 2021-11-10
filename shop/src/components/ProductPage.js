@@ -7,26 +7,10 @@ import { ErrorAlert } from './ErrorAlert';
 
 import {
   fetchProductRequest,
-  fetchProductSuccess,
-  fetchProductFailure,
   addToCart,
   changeCounter,
   selectSize
 } from '../actions/actionCreators';
-
-export const fetchProduct = async (id, dispatch) => {
-  try {
-    dispatch(fetchProductRequest());
-    const response = await fetch(`http://localhost:7070/api/items/${id}`);
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    const prod = await response.json();
-    dispatch(fetchProductSuccess(prod));
-  } catch (error) {
-    dispatch(fetchProductFailure(error.message));
-  }
-};
 
 export function ProductPage() {
   const history = useHistory();
@@ -37,11 +21,11 @@ export function ProductPage() {
     loading,
     counter,
     sizeSelected
-  } = useSelector((state) => state.Details);
+  } = useSelector((state) => state.details);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    fetchProduct(id, dispatch);
+    dispatch(fetchProductRequest(id));
   }, [id, dispatch]);
 
   const counterUp = () => {
@@ -84,7 +68,7 @@ export function ProductPage() {
   };
 
   return (
-    (error) ? <ErrorAlert onRetry={() => fetchProduct(id, dispatch)} /> :
+    (error) ? <ErrorAlert onRetry={() => fetchProductRequest(id, dispatch)} /> :
       <section className="catalog-item">
         {(loading) ? <Loader /> : <>
           <h2 className="text-center">{product.title}</h2>

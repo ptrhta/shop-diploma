@@ -7,6 +7,7 @@ export function Categories(props) {
     categories,
     selected
   } = props;
+  
   const onSelect = (event, id) => {
     event.preventDefault();
     handleSelect(id);
@@ -14,15 +15,6 @@ export function Categories(props) {
 
   return (
     <ul className="catalog-categories nav justify-content-center">
-      <li className="nav-item">
-        <a
-          onClick={(event) => onSelect(event, 0)}
-          className={(selected === 0) ? 'nav-link active' : 'nav-link'}
-          href="#"
-        >
-          Все
-        </a>
-      </li>
       {categories.map((o) => <li key={o.id} className="nav-item">
         <a
           onClick={(event) => onSelect(event, o.id)}

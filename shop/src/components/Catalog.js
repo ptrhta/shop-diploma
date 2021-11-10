@@ -1,136 +1,79 @@
-import React from 'react';
-import { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { PropTypes } from 'prop-types';
-import { Categories } from './Categories';
-import { Products } from './Products';
-import { Loader } from './Loader';
-import { ErrorAlert } from './ErrorAlert';
+import React from 'react'
+import { useEffect } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
+import { PropTypes } from 'prop-types'
+import { Categories } from './Categories'
+import { Products } from './Products'
+import { Loader } from './Loader'
+import { ErrorAlert } from './ErrorAlert'
 import {
+  catalogInit,
   fetchProductsRequest,
-  fetchProductsSuccess,
-  fetchProductsFailure,
-  fetchMoreProductsRequest,
-  fetchMoreProductsSuccess,
-  fetchMoreProductsFailure,
-  fetchCategoriesRequest,
-  fetchCategoriesSuccess,
-  fetchCategoriesFailure,
-  selectCategory,
-  setNoMore
-} from '../actions/actionCreators';
+  selectCategory
+} from '../actions/actionCreators'
 
-export const fetchProducts = async (dispatch, api) => {
-  try {
-    dispatch(fetchProductsRequest());
-    const response = await fetch(api);
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    const prods = await response.json();
-    dispatch(fetchProductsSuccess(prods));
-  } catch (error) {
-    dispatch(fetchProductsFailure(error.message));
-  }
-};
+import ApiSearch from '../api/apiSearch'
 
-export const fetchCategories = async (dispatch) => {
-  try {
-    dispatch(fetchCategoriesRequest());
-    const response = await fetch(`http://localhost:7070/api/categories`);
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    const categs = await response.json();
-    dispatch(fetchCategoriesSuccess(categs));
-  } catch (error) {
-    dispatch(fetchCategoriesFailure(error.message));
-  }
-};
-
-const fetchMoreProducts = async (dispatch, api, offsetParam) => {
-  try {
-    dispatch(fetchMoreProductsRequest());
-    const url = api + '&' + offsetParam;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    const moreProds = await response.json();
-    if (moreProds.length < 6) {
-      dispatch(setNoMore(true));
-    }
-    dispatch(fetchMoreProductsSuccess(moreProds));
-  } catch (error) {
-    dispatch(fetchMoreProductsFailure(error.message));
-  }
-};
-
-export function Catalog(props) {
-  const {
-    products,
-    categories,
-    category,
-    error,
-    loading,
-    moreProductsError,
-    moreProductsLoading,
-    noMore
-  } = useSelector((state) => state.Catalog);
-  const { searchWord } = useSelector((state) => state.Search);
-  const dispatch = useDispatch();
-
-  const offsetParam = new URLSearchParams({ offset: products.length });
-  const searchParam = new URLSearchParams({ q: searchWord });
-  const categoryParam = new URLSearchParams({ categoryId: category });
-  const api = `http://localhost:7070/api/items` +  '?' + searchParam +  '&' + categoryParam;
+export function Catalog (props) {
+  const showSearch = props.showSearch
+  const { products, categories, category, error, loading, more } = useSelector(
+    state => state.catalog
+  )
+  const isShowSearch = ApiSearch(showSearch ? 'q' : null)
+  const dispatch = useDispatch()
 
   useEffect(() => {
-    fetchProducts(dispatch, api);
-  }, [dispatch, api]);
+    dispatch(catalogInit(isShowSearch))
+  }, [dispatch, isShowSearch])
 
   useEffect(() => {
-    fetchCategories(dispatch);
-  }, [dispatch]);
+    dispatch(fetchProductsRequest(false))
+  }, [dispatch, isShowSearch])
 
-  const handleSelect = (id) => {
-    dispatch(selectCategory(id));
-    dispatch(setNoMore(false));
-  };
+  const handleReload = () => {
+    dispatch(fetchProductsRequest(true))
+  }
 
-  const loadMore = (event) => {
-    event.preventDefault();
-    fetchMoreProducts(dispatch, api, offsetParam);
-  };
+  const handleSelect = id => {
+    dispatch(selectCategory(id))
+  }
 
   return (
-    <section className="catalog">
-      <h2 className="text-center">Каталог</h2>
+    <section className='catalog'>
+      <h2 className='text-center'>Каталог</h2>
       {props.children}
-      {(error) ? <ErrorAlert onRetry={() => fetchProducts(dispatch, api)} /> : null}
-      {(loading) ? <Loader /> : <>
-        {(loading || categories.length) ? <Categories
-          selected={category}
-          categories={categories}
-          handleSelect={handleSelect}
-        /> : null}
-        <Products products={products} />
-        {(moreProductsLoading) ? <Loader /> : null}
-        {(moreProductsError) ? <ErrorAlert onRetry={(event) => loadMore(event)} /> : null }
-        {(products.length < 6 || noMore) ? null : <div className="text-center">
-          <button
-            className="btn btn-outline-primary"
-            disabled={moreProductsLoading}
-            onClick={(event) => loadMore(event)}
-          >
-            Загрузить ещё
-          </button>
-        </div>}
-      </>}
+      {error ? <ErrorAlert onRetry={handleReload} /> : null}
+      {loading ? (
+        <Loader />
+      ) : (
+        <>
+          {loading || categories.length ? (
+            <Categories
+              selected={category}
+              categories={categories}
+              handleSelect={handleSelect}
+            />
+          ) : null}
+          {products && <Products products={products} />}
+          {loading ? <Loader /> : null}
+          {error ? <ErrorAlert onRetry={handleReload} /> : null}
+          {products.length < 6 || !more ? null : (
+            <div className='text-center'>
+              <button
+                className='btn btn-outline-primary'
+                disabled={!more}
+                onClick={handleReload}
+              >
+                Загрузить ещё
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </section>
-  );
+  )
 }
 
 Catalog.propTypes = {
   children: PropTypes.node
-};
+}

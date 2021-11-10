@@ -24,10 +24,9 @@ import {
           sizeSelected: ''
         };
       case FETCH_PRODUCT_SUCCESS:
-        const { product } = action.payload;
         return {
           ...state,
-          product,
+          product: action.payload.product,
           loading: false,
           error: null
         };

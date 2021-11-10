@@ -23,7 +23,7 @@ export default function App() {
         <Switch>
           <Route path="/" exact={exact} component={Main} />
           <Route path="/catalog" exact={exact}>
-            <Catalog>
+            <Catalog showSearch>
               <Search />
             </Catalog>
           </Route>
